@@ -6,5 +6,5 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 import app
 
-def dummy_test():
+def test_dummy():
     assert 1 == 1
