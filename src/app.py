@@ -23,6 +23,23 @@ def init_db():
     )
     """)
 
+    # Clients table (core)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS clients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,
+        age INTEGER,
+        height REAL,
+        weight REAL,
+        program TEXT,
+        calories INTEGER,
+        target_weight REAL,
+        target_adherence INTEGER,
+        membership_status TEXT,
+        membership_end TEXT
+    )
+    """)
+
     # Default to admin user
     cur.execute("SELECT * FROM users WHERE username='admin'")
     if not cur.fetchone():
@@ -51,6 +68,25 @@ def list_clients():
         })
     return out
 
+def get_client(name):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, age, height, weight, program, calories, membership_status FROM clients WHERE name=?", (name,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "name": row[1],
+        "age": row[2],
+        "height": row[3],
+        "weight": row[4],
+        "program": row[5],
+        "calories": row[6],
+        "membership_status": row[7],
+    }
+
 def add_client(name, age=None):
     conn = get_conn()
     cur = conn.cursor()
@@ -65,6 +101,13 @@ init_db()
 @app.route("/clients", methods=["GET"])
 def clients_get():
     return jsonify(list_clients()), 200
+
+@app.route("/clients/<string:name>", methods=["GET"])
+def clients_get_one(name):
+    c = get_client(name)
+    if not c:
+        return jsonify({"error": "client not found"}), 404
+    return jsonify(c), 200
 
 @app.route("/clients", methods=["POST"])
 def clients_post():
