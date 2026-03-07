@@ -69,3 +69,16 @@ def test_get_nonexistent_client(tmp_path):
     client = app.app.test_client()
     resp = client.get('/clients/nonexistent')
     assert resp.status_code == 404
+
+
+def test_get_client_by_name(tmp_path):
+    app = make_app(tmp_path / 'test.db')
+    client = app.app.test_client()
+    resp = client.post('/clients', json={'name': 'carol', 'age': 28})
+    assert resp.status_code == 201
+
+    resp = client.get('/clients/carol')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['name'] == 'carol'
+    assert data['age'] == 28
