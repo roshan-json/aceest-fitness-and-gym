@@ -45,18 +45,23 @@ def test_get_clients_empty(tmp_path):
 def test_add_and_get_client(tmp_path):
     app = make_app(tmp_path / 'test.db')
     client = app.app.test_client()
-
-    import sqlite3
-    conn = sqlite3.connect(str(tmp_path / 'test.db'))
-    cur = conn.cursor()
-    cur.execute("INSERT INTO clients (name, age, membership_status) VALUES (?,?,?)", ('alice', 30, 'Active'))
-    conn.commit()
-    conn.close()
+    resp = client.post('/clients', json={'name': 'alice', 'age': 30})
+    assert resp.status_code == 201
+    assert resp.get_json().get('name') == 'alice'
 
     resp = client.get('/clients')
     assert resp.status_code == 200
     data = resp.get_json()
     assert any(c['name'] == 'alice' for c in data)
+
+
+def test_duplicate_client_conflict(tmp_path):
+    app = make_app(tmp_path / 'test.db')
+    client = app.app.test_client()
+    resp = client.post('/clients', json={'name': 'bob'})
+    assert resp.status_code == 201
+    resp = client.post('/clients', json={'name': 'bob'})
+    assert resp.status_code == 409
 
 
 def test_get_nonexistent_client(tmp_path):

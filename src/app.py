@@ -51,6 +51,13 @@ def list_clients():
         })
     return out
 
+def add_client(name, age=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO clients (name, age, membership_status) VALUES (?,?,?)", (name, age, 'Active'))
+    conn.commit()
+    conn.close()
+
 # Flask application
 app = Flask(__name__)
 init_db()
@@ -58,6 +65,19 @@ init_db()
 @app.route("/clients", methods=["GET"])
 def clients_get():
     return jsonify(list_clients()), 200
+
+@app.route("/clients", methods=["POST"])
+def clients_post():
+    data = request.get_json(force=True, silent=True) or {}
+    name = data.get("name")
+    age = data.get("age")
+    if not name:
+        return jsonify({"error": "'name' is required"}), 400
+    try:
+        add_client(name, age)
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "client already exists"}), 409
+    return jsonify({"message": "client added", "name": name}), 201
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
