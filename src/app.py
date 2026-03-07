@@ -31,9 +31,33 @@ def init_db():
     conn.commit()
     conn.close()
 
+def list_clients():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, age, height, weight, program, calories, membership_status FROM clients ORDER BY name")
+    rows = cur.fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        out.append({
+            "id": r[0],
+            "name": r[1],
+            "age": r[2],
+            "height": r[3],
+            "weight": r[4],
+            "program": r[5],
+            "calories": r[6],
+            "membership_status": r[7],
+        })
+    return out
+
 # Flask application
 app = Flask(__name__)
 init_db()
+
+@app.route("/clients", methods=["GET"])
+def clients_get():
+    return jsonify(list_clients()), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
