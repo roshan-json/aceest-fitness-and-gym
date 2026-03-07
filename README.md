@@ -95,3 +95,75 @@ Notes about environment variables
 
 - `DB_NAME` — optional: path to the SQLite DB file used by the app. Tests set this to temporary DBs; in production you can set it to a persistent path or a mounted volume.
 - `PORT` — optional: port used by the Flask app; default is `5000`.
+
+## Quick curl examples
+
+Use these examples to exercise the API locally (assumes the app is reachable at http://localhost:5000).
+
+- List clients
+
+```bash
+curl -s -X GET http://localhost:5000/clients | jq .
+```
+
+- Get a client by name (replace alice)
+
+```bash
+curl -s -X GET http://localhost:5000/clients/alice | jq .
+```
+
+- Create a client
+
+```bash
+curl -s -X POST http://localhost:5000/clients \
+	-H "Content-Type: application/json" \
+	-d '{"name":"alice","age":30}' | jq .
+```
+
+- Generate a program for a client
+
+```bash
+curl -s -X POST http://localhost:5000/clients/alice/generate_program | jq .
+```
+
+Notes:
+- `jq` is optional but handy to pretty-print JSON responses.
+- If you run the app in Docker and set a different `PORT`, update the host:port accordingly.
+
+## HTTPie examples
+
+If you prefer HTTPie (https://httpie.io), here are equivalent commands. HTTPie prints formatted JSON by default.
+
+- List clients
+
+```bash
+http GET http://localhost:5000/clients
+```
+
+- Get a client by name
+
+```bash
+http GET http://localhost:5000/clients/alice
+```
+
+- Create a client
+
+```bash
+http POST http://localhost:5000/clients name=alice age:=30
+```
+
+- Generate a program
+
+```bash
+http POST http://localhost:5000/clients/alice/generate_program
+```
+
+## Postman collection
+
+You can import a Postman collection into Postman to quickly exercise the API. The collection file is at:
+
+```
+postman/aceest.postman_collection.json
+```
+
+Import it into Postman and set the `baseUrl` variable (default: `http://localhost:5000`).
