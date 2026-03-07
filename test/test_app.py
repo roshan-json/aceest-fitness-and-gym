@@ -82,3 +82,28 @@ def test_get_client_by_name(tmp_path):
     data = resp.get_json()
     assert data['name'] == 'carol'
     assert data['age'] == 28
+
+
+def test_generate_program_for_client(tmp_path):
+    app = make_app(tmp_path / 'test.db')
+    client = app.app.test_client()
+    resp = client.post('/clients', json={'name': 'dan', 'age': 35})
+    assert resp.status_code == 201
+
+    resp = client.post('/clients/dan/generate_program')
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body['client'] == 'dan'
+    assert 'program' in body and isinstance(body['program'], str)
+
+    resp = client.get('/clients/dan')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data.get('program') == body['program']
+
+
+def test_generate_program_not_found(tmp_path):
+    app = make_app(tmp_path / 'test.db')
+    client = app.app.test_client()
+    resp = client.post('/clients/ghost/generate_program')
+    assert resp.status_code == 404

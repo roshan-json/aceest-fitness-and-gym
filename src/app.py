@@ -40,6 +40,52 @@ def init_db():
     )
     """)
 
+    # Progress table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT,
+        week TEXT,
+        adherence INTEGER
+    )
+    """)
+
+    # Workouts
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS workouts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT,
+        date TEXT,
+        workout_type TEXT,
+        duration_min INTEGER,
+        notes TEXT
+    )
+    """)
+
+    # Exercises
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS exercises (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workout_id INTEGER,
+        name TEXT,
+        sets INTEGER,
+        reps INTEGER,
+        weight REAL
+    )
+    """)
+
+    # Metrics
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT,
+        date TEXT,
+        weight REAL,
+        waist REAL,
+        bodyfat REAL
+    )
+    """)
+
     # Default to admin user
     cur.execute("SELECT * FROM users WHERE username='admin'")
     if not cur.fetchone():
@@ -47,6 +93,12 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+program_templates = {
+    "Fat Loss": ["Full Body HIIT", "Circuit Training", "Cardio + Weights"],
+    "Muscle Gain": ["Push/Pull/Legs", "Upper/Lower Split", "Full Body Strength"],
+    "Beginner": ["Full Body 3x/week", "Light Strength + Mobility"]
+}
 
 def list_clients():
     conn = get_conn()
@@ -94,6 +146,20 @@ def add_client(name, age=None):
     conn.commit()
     conn.close()
 
+def generate_program_for_client(name):
+    client = get_client(name)
+    if not client:
+        return None
+    cats = list(program_templates.keys())
+    choice = cats[hash(name) % len(cats)]
+    program = program_templates[choice][0]
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE clients SET program=? WHERE name=?", (program, name))
+    conn.commit()
+    conn.close()
+    return program
+
 # Flask application
 app = Flask(__name__)
 init_db()
@@ -121,6 +187,13 @@ def clients_post():
     except sqlite3.IntegrityError:
         return jsonify({"error": "client already exists"}), 409
     return jsonify({"message": "client added", "name": name}), 201
+
+@app.route("/clients/<string:name>/generate_program", methods=["POST"])
+def clients_generate(name):
+    program = generate_program_for_client(name)
+    if not program:
+        return jsonify({"error": "client not found"}), 404
+    return jsonify({"client": name, "program": program}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
