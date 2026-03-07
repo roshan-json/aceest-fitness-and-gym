@@ -78,6 +78,36 @@ pipeline {
         }
       }
     }
+    
+    stage('Tag & Push Git') {
+      when {
+        allOf {
+          branch 'main'
+          expression { return env.VERSION != 'unset' }
+        }
+      }
+      steps {
+        // Create and push a git tag for the new version so next build will increment
+        withCredentials([usernamePassword(credentialsId: 'ghcr-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+          script {
+            def tagName = "v${env.VERSION}"
+            sh '''
+              set -e
+              git config user.email "jenkins@localhost"
+              git config user.name "${GIT_USER}"
+              # Avoid failing if tag already exists
+              if git rev-parse "refs/tags/${tagName}" >/dev/null 2>&1; then
+                echo "Tag ${tagName} already exists, skipping creation"
+              else
+                git tag -a "${tagName}" -m "CI: release ${tagName}"
+                # Push the tag using token-authenticated URL
+                git push "https://${GIT_USER}:${GIT_TOKEN}@github.com/roshanjson/aceest-fitness-and-gym.git" "${tagName}"
+              fi
+            '''
+          }
+        }
+      }
+    }
   }
 
   post {
