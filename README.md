@@ -2,6 +2,43 @@
 
 This repository contains a small Flask-based REST API for managing clients and generating simple workout programs. It includes unit tests (pytest), a multi-stage Dockerfile that runs tests during build, and CI/CD scaffolding including a `Jenkinsfile` and GitHub Actions workflow.
 
+## Local Setup and Execution
+
+To set up and run the application locally:
+
+1. Ensure Python 3.11+ is installed.
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run the application: `python src/app.py`
+4. The app will be available at http://localhost:5000
+
+## Running Tests Manually
+
+To run the test suite manually:
+
+1. Install dependencies: `pip install -r requirements.txt`
+2. Run pytest: `pytest` or `python -m pytest test/`
+
+## CI/CD Integration Overview
+
+### Jenkins
+
+The Jenkins pipeline automates the build and deployment process:
+
+- **Checkout & Versioning**: Pulls the latest code and auto-increments the version based on Git tags.
+- **Build**: Builds the Docker test target, which installs dependencies and runs pytest during the build to ensure tests pass.
+- **Push**: Builds the runtime image and pushes both test and runtime images to GitHub Container Registry (GHCR).
+
+This provides a quality gate, ensuring code compiles and integrates correctly in a controlled environment.
+
+### GitHub Actions
+
+The GitHub Actions workflow (.github/workflows/ci-cd.yml) triggers on every push or pull request to the main branch:
+
+- **Test**: Sets up Python, installs dependencies, and runs pytest to validate functionality.
+- **Build and Push**: On pushes to main, builds the Docker image and pushes it to GHCR.
+
+This ensures automated testing and deployment on code changes.
+
 ## Jenkins setup (brief)
 
 This project includes a declarative `Jenkinsfile` at the repository root that:
