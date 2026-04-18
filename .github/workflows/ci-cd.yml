@@ -70,7 +70,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=aceest-fitness-and-gym
-            -Dsonar.organization=roshanjson
+            -Dsonar.organization=roshan-json
             -Dsonar.projectName="ACEEST Fitness and Gym"
             -Dsonar.sources=src
             -Dsonar.tests=test
