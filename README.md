@@ -1,1 +1,206 @@
 # aceest-fitness-and-gym
+
+This repository contains a small Flask-based REST API for managing clients and generating simple workout programs. It includes unit tests (pytest), a multi-stage Dockerfile that runs tests during build, and CI/CD scaffolding including a `Jenkinsfile` and GitHub Actions workflow.
+
+## Local Setup and Execution
+
+To set up and run the application locally:
+
+1. Ensure Python 3.11+ is installed.
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run the application: `python src/app.py`
+4. The app will be available at http://localhost:5000
+
+## Running Tests Manually
+
+To run the test suite manually:
+
+1. Install dependencies: `pip install -r requirements.txt`
+2. Run pytest: `pytest` or `python -m pytest test/`
+
+## CI/CD Integration Overview
+
+### Jenkins
+
+The Jenkins pipeline automates the build and deployment process:
+
+- **Checkout & Versioning**: Pulls the latest code and auto-increments the version based on Git tags.
+- **Build**: Builds the Docker test target, which installs dependencies and runs pytest during the build to ensure tests pass.
+- **Push**: Builds the runtime image and pushes both test and runtime images to GitHub Container Registry (GHCR).
+
+This provides a quality gate, ensuring code compiles and integrates correctly in a controlled environment.
+
+### GitHub Actions
+
+The GitHub Actions workflow (.github/workflows/ci-cd.yml) triggers on every push or pull request to the main branch:
+
+- **Test**: Sets up Python, installs dependencies, and runs pytest to validate functionality.
+- **Build and Push**: On pushes to main, builds the Docker image and pushes it to GHCR.
+
+This ensures automated testing and deployment on code changes.
+
+## Jenkins setup (brief)
+
+This project includes a declarative `Jenkinsfile` at the repository root that:
+
+- Builds the Docker `test` target (this runs `pytest` during the image build).
+- Builds a runtime image and tags it.
+- Pushes both the test and runtime images to GitHub Container Registry (GHCR).
+
+Prerequisites on your Jenkins instance
+
+1. A Jenkins agent (node) with Docker installed and permission to run Docker commands.
+2. A Jenkins credential containing your GH username and a Personal Access Token (PAT) with the required scopes:
+	- Token scopes: `write:packages` (for GHCR) and `repo` (if the registry access requires repo scope). Create the PAT on GitHub -> Settings -> Developer settings -> Personal access tokens.
+3. Add the credential to Jenkins (Credentials > System > Add Credentials) as type "Username with password".
+	- Set the credential ID to: `ghcr-creds` (the `Jenkinsfile` uses this ID). The username should be your GitHub username and the password should be the PAT.
+
+How the pipeline uses the credential
+
+- The pipeline logs into GHCR in the Push stage with:
+
+```bash
+echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
+```
+
+where `GHCR_USER` and `GHCR_TOKEN` come from the Jenkins credential stored as `ghcr-creds`.
+
+Configuring a Jenkins job
+
+1. Create a new Pipeline or Multibranch Pipeline job pointing at this repository.
+2. Ensure the job runs on an agent with Docker and sufficient disk/CPU/memory to build the image and run tests.
+3. The default `Jenkinsfile` uses `ghcr.io/roshanjson/aceest-fitness-and-gym` as the image name; change `IMAGE_NAME` in the `Jenkinsfile` if you want to use a different registry or repository.
+
+Local verification commands
+
+You can locally test the same steps that Jenkins runs. From the repository root:
+
+Build and run the tests inside the image (builds the `test` target which runs pytest during build):
+
+```bash
+docker build --target test -f dockerFile/Dockerfile -t aceest-test:latest .
+```
+
+Build the runtime image:
+
+```bash
+docker build -f dockerFile/Dockerfile -t aceest:latest .
+```
+
+Login to GHCR (replace <USER> with your GitHub username):
+
+```bash
+docker login ghcr.io -u <USER>
+# Enter your PAT when prompted (or use --password-stdin with echo to pipe the token)
+```
+
+Push images (after login):
+
+```bash
+docker tag aceest:latest ghcr.io/<USER>/aceest-fitness-and-gym:latest
+docker push ghcr.io/<USER>/aceest-fitness-and-gym:latest
+```
+
+Notes
+
+- The `dockerFile/Dockerfile` is multi-stage with a `test` stage that runs `pytest` during build. A failing test will cause the build/test stage to fail just like Jenkins.
+- The `Jenkinsfile` assumes the credential id `ghcr-creds`; change it if you prefer a different ID.
+- Make sure to secure your PAT and rotate it per your org policy.
+
+## API Endpoints
+
+The Flask app exposes the following HTTP endpoints (all paths are rooted at the app base):
+
+- GET /clients
+	- Description: Return a JSON list of all clients.
+	- Response: 200 with an array of client objects.
+
+- GET /clients/<name>
+	- Description: Return the client record matching <name>.
+	- Response: 200 with client object if found, 404 if not found.
+
+- POST /clients
+	- Description: Create a new client. Expects a JSON body with at least the `name` field; `age` is optional.
+	- Example body: `{ "name": "alice", "age": 30 }`
+	- Response: 201 on success, 400 if `name` missing, 409 if a client with the same name already exists.
+
+- POST /clients/<name>/generate_program
+	- Description: Generate and assign a simple program for the named client.
+	- Response: 200 with `{ "client": "<name>", "program": "<program>" }` if successful, 404 if client not found.
+
+Notes about environment variables
+
+- `DB_NAME` — optional: path to the SQLite DB file used by the app. Tests set this to temporary DBs; in production you can set it to a persistent path or a mounted volume.
+- `PORT` — optional: port used by the Flask app; default is `5000`.
+
+## Quick curl examples
+
+Use these examples to exercise the API locally (assumes the app is reachable at http://localhost:5000).
+
+- List clients
+
+```bash
+curl -s -X GET http://localhost:5000/clients | jq .
+```
+
+- Get a client by name (replace alice)
+
+```bash
+curl -s -X GET http://localhost:5000/clients/alice | jq .
+```
+
+- Create a client
+
+```bash
+curl -s -X POST http://localhost:5000/clients \
+	-H "Content-Type: application/json" \
+	-d '{"name":"alice","age":30}' | jq .
+```
+
+- Generate a program for a client
+
+```bash
+curl -s -X POST http://localhost:5000/clients/alice/generate_program | jq .
+```
+
+Notes:
+- `jq` is optional but handy to pretty-print JSON responses.
+- If you run the app in Docker and set a different `PORT`, update the host:port accordingly.
+
+## HTTPie examples
+
+If you prefer HTTPie (https://httpie.io), here are equivalent commands. HTTPie prints formatted JSON by default.
+
+- List clients
+
+```bash
+http GET http://localhost:5000/clients
+```
+
+- Get a client by name
+
+```bash
+http GET http://localhost:5000/clients/alice
+```
+
+- Create a client
+
+```bash
+http POST http://localhost:5000/clients name=alice age:=30
+```
+
+- Generate a program
+
+```bash
+http POST http://localhost:5000/clients/alice/generate_program
+```
+
+## Postman collection
+
+You can import a Postman collection into Postman to quickly exercise the API. The collection file is at:
+
+```
+postman/aceest.postman_collection.json
+```
+
+Import it into Postman and set the `baseUrl` variable (default: `http://localhost:5000`).

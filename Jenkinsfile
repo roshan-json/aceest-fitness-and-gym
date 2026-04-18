@@ -3,14 +3,12 @@
 // - Builds the runtime image
 // - Pushes images to GitHub Container Registry (GHCR)
 // - Validates Kubernetes manifests
-// - Deploys to Kubernetes cluster (optional, based on environment)
 //
 // Prerequisites in Jenkins:
-// 1) A node/agent with Docker and kubectl installed
+// 1) A node/agent with Docker installed and permission to run docker commands.
 // 2) A Jenkins credential of type "Username with password" with ID 'ghcr-creds'
 //    where the username is your GH username and password is a personal access token
 //    with "write:packages" and "repo" (if pushing to ghcr.io).
-// 3) For Kubernetes deployment: kubeconfig credential or cluster access
 
 pipeline {
   agent any
@@ -20,7 +18,6 @@ pipeline {
     DOCKERFILE = "dockerFile/Dockerfile"
     // VERSION will be set at runtime in the Checkout stage
     VERSION = "unset"
-    KUBECONFIG_PATH = credentials('kubeconfig') // Optional: for cluster deployment
   }
 
   stages {
@@ -118,33 +115,7 @@ EOF
         }
       }
     }
-
-    stage('Deploy to Kubernetes (Optional)') {
-      when {
-        expression { return env.DEPLOY_TO_K8S == 'true' }
-      }
-      steps {
-        script {
-          // Deploy using kubectl - requires kubeconfig credential
-          sh '''
-            set -e
-            echo "Deploying to Kubernetes cluster..."
-
-            # Update image in deployments
-            sed -i "s|ghcr.io/roshanjson/aceest-fitness-and-gym:latest|${IMAGE_NAME}:${VERSION}|g" k8s/*.yaml
-
-            # Apply Kubernetes manifests
-            kubectl apply -f k8s/
-
-            # Wait for rollout to complete
-            kubectl rollout status deployment/aceest-fitness-deployment --timeout=300s
-
-            echo "Deployment completed successfully!"
-          '''
-        }
-      }
-    }
-
+    
     stage('Tag & Push Git') {
       when {
         allOf {
@@ -162,7 +133,7 @@ EOF
               git config user.email "jenkins@localhost"
               git config user.name "${GIT_USER}"
               # Avoid failing if tag already exists
-              if git rev-parse "refs/tags/${tagName}" >/dev/null 2>&dev/null; then
+              if git rev-parse "refs/tags/${tagName}" >/dev/null 2>&1; then
                 echo "Tag ${tagName} already exists, skipping creation"
               else
                 git tag -a "${tagName}" -m "CI: release ${tagName}"
