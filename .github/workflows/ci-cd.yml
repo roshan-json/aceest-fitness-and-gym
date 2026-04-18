@@ -32,9 +32,29 @@ jobs:
         run: |
           pytest -q
 
+  validate-k8s:
+    name: Validate Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Validate Kubernetes manifests
+        run: |
+          echo "Validating Kubernetes manifests..."
+          find k8s/ -name "*.yaml" -o -name "*.yml" | while read -r file; do
+            echo "Validating $file..."
+            kubectl --dry-run=client --validate=true apply -f "$file" || exit 1
+          done
+          echo "All Kubernetes manifests are valid!"
+
   build-and-push:
     name: Build and push Docker image
-    needs: test
+    needs: [test, validate-k8s]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
