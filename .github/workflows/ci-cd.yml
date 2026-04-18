@@ -60,8 +60,12 @@ jobs:
           coverage xml --include=src/*
           coverage report
 
+      - name: SonarQube credentials debug
+        run: |
+          echo "SONAR_HOST_URL set: ${SONAR_HOST_URL:+yes}"
+          echo "SONAR_TOKEN set: ${SONAR_TOKEN:+yes}"
+
       - name: SonarQube Scan
-        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
         uses: sonarsource/sonarqube-scan-action@master
         with:
           args: >
