@@ -1,14 +1,16 @@
-// Jenkins declarative pipeline with Kubernetes deployment
+// Jenkins declarative pipeline with Kubernetes deployment and SonarQube analysis
 // - Builds the Docker "test" target to run pytest during build
 // - Builds the runtime image
 // - Pushes images to GitHub Container Registry (GHCR)
 // - Validates Kubernetes manifests
+// - Performs SonarQube code quality analysis
 //
 // Prerequisites in Jenkins:
 // 1) A node/agent with Docker installed and permission to run docker commands.
 // 2) A Jenkins credential of type "Username with password" with ID 'ghcr-creds'
 //    where the username is your GH username and password is a personal access token
 //    with "write:packages" and "repo" (if pushing to ghcr.io).
+// 3) SonarQube credentials: 'sonar-host-url' and 'sonar-token' Jenkins credentials
 
 pipeline {
   agent any
@@ -18,6 +20,8 @@ pipeline {
     DOCKERFILE = "dockerFile/Dockerfile"
     // VERSION will be set at runtime in the Checkout stage
     VERSION = "unset"
+    SONAR_HOST_URL = credentials('sonar-host-url')
+    SONAR_TOKEN = credentials('sonar-token')
   }
 
   stages {
@@ -81,6 +85,42 @@ else:
     print("\nSome manifests have errors!")
     sys.exit(1)
 EOF
+          '''
+        }
+      }
+    }
+
+    stage('SonarQube Code Analysis') {
+      steps {
+        script {
+          // Run tests with coverage
+          sh '''
+            python3 -m pip install coverage
+            coverage run -m pytest
+            coverage xml --include=src/*
+            coverage report
+          '''
+          
+          // Run SonarQube analysis
+          sh '''
+            set -e
+            echo "Running SonarQube analysis..."
+            
+            # Download and run SonarQube scanner
+            curl -sSLo ./sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+            unzip -o sonar-scanner.zip
+            
+            # Run analysis
+            ./sonar-scanner-5.0.1.3006-linux/bin/sonar-scanner \
+              -Dsonar.projectKey=aceest-fitness-and-gym \
+              -Dsonar.projectName="ACEEST Fitness and Gym" \
+              -Dsonar.sources=src \
+              -Dsonar.tests=test \
+              -Dsonar.python.coverage.reportPaths=coverage.xml \
+              -Dsonar.host.url="${SONAR_HOST_URL}" \
+              -Dsonar.login="${SONAR_TOKEN}"
+            
+            echo "SonarQube analysis completed!"
           '''
         }
       }
