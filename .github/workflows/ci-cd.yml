@@ -62,7 +62,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=aceest-fitness-and-gym
-            -Dsonar.projectName=ACEEST Fitness and Gym
+            -Dsonar.projectName="ACEEST Fitness and Gym"
             -Dsonar.sources=src
             -Dsonar.tests=test
             -Dsonar.python.coverage.reportPaths=coverage.xml
