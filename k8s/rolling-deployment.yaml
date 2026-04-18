@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-fitness-rolling
+  labels:
+    app: aceest-fitness
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: aceest-fitness
+  template:
+    metadata:
+      labels:
+        app: aceest-fitness
+    spec:
+      containers:
+        - name: aceest-fitness
+          image: ghcr.io/roshanjson/aceest-fitness-and-gym:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "5000"
+            - name: DB_NAME
+              value: "/data/aceest_fitness.db"
+          readinessProbe:
+            httpGet:
+              path: /clients
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /clients
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 20

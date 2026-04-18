@@ -32,9 +32,52 @@ jobs:
         run: |
           pytest -q
 
+  validate-k8s:
+    name: Validate Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install YAML validator
+        run: pip install pyyaml
+
+      - name: Validate Kubernetes manifests
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import os
+          import sys
+          
+          valid = True
+          for root, dirs, files in os.walk('k8s'):
+              for file in files:
+                  if file.endswith(('.yaml', '.yml')):
+                      filepath = os.path.join(root, file)
+                      print(f"Validating {filepath}...")
+                      try:
+                          with open(filepath, 'r') as f:
+                              yaml.safe_load(f)
+                          print(f"  ✓ Valid")
+                      except yaml.YAMLError as e:
+                          print(f"  ✗ Invalid: {e}")
+                          valid = False
+          
+          if valid:
+              print("\nAll Kubernetes manifests are valid!")
+              sys.exit(0)
+          else:
+              print("\nSome manifests have errors!")
+              sys.exit(1)
+          EOF
+
   build-and-push:
     name: Build and push Docker image
-    needs: test
+    needs: [test, validate-k8s]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:

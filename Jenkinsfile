@@ -1,7 +1,8 @@
-// Jenkins declarative pipeline
+// Jenkins declarative pipeline with Kubernetes deployment
 // - Builds the Docker "test" target to run pytest during build
 // - Builds the runtime image
 // - Pushes images to GitHub Container Registry (GHCR)
+// - Validates Kubernetes manifests
 //
 // Prerequisites in Jenkins:
 // 1) A node/agent with Docker installed and permission to run docker commands.
@@ -45,6 +46,42 @@ pipeline {
             }
           }
           echo "Computed VERSION=${env.VERSION} (based on latest tag: ${latestTag})"
+        }
+      }
+    }
+
+    stage('Validate Kubernetes Manifests') {
+      steps {
+        script {
+          // Validate YAML syntax using Python (no cluster connection needed)
+          sh '''
+            python3 << 'EOF'
+import yaml
+import os
+import sys
+
+valid = True
+for root, dirs, files in os.walk('k8s'):
+    for file in files:
+        if file.endswith(('.yaml', '.yml')):
+            filepath = os.path.join(root, file)
+            print(f"Validating {filepath}...")
+            try:
+                with open(filepath, 'r') as f:
+                    yaml.safe_load(f)
+                print(f"  ✓ Valid")
+            except yaml.YAMLError as e:
+                print(f"  ✗ Invalid: {e}")
+                valid = False
+
+if valid:
+    print("\nAll Kubernetes manifests are valid!")
+    sys.exit(0)
+else:
+    print("\nSome manifests have errors!")
+    sys.exit(1)
+EOF
+          '''
         }
       }
     }
