@@ -58,6 +58,7 @@ jobs:
           coverage report
 
       - name: SonarQube Scan
+        if: secrets.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@master
         with:
           args: >

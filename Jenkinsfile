@@ -3,14 +3,15 @@
 // - Builds the runtime image
 // - Pushes images to GitHub Container Registry (GHCR)
 // - Validates Kubernetes manifests
-// - Performs SonarQube code quality analysis
+// - Performs SonarQube code quality analysis (optional, skipped if credentials not configured)
 //
 // Prerequisites in Jenkins:
 // 1) A node/agent with Docker installed and permission to run docker commands.
 // 2) A Jenkins credential of type "Username with password" with ID 'ghcr-creds'
 //    where the username is your GH username and password is a personal access token
 //    with "write:packages" and "repo" (if pushing to ghcr.io).
-// 3) SonarQube credentials: 'sonar-host-url' and 'sonar-token' Jenkins credentials
+// 3) (OPTIONAL) SonarQube credentials: 'sonar-host-url' and 'sonar-token' Jenkins credentials
+//    If not provided, SonarQube stage will be skipped.
 
 pipeline {
   agent any
@@ -20,8 +21,6 @@ pipeline {
     DOCKERFILE = "dockerFile/Dockerfile"
     // VERSION will be set at runtime in the Checkout stage
     VERSION = "unset"
-    SONAR_HOST_URL = credentials('sonar-host-url')
-    SONAR_TOKEN = credentials('sonar-token')
   }
 
   stages {
@@ -91,6 +90,17 @@ EOF
     }
 
     stage('SonarQube Code Analysis') {
+      when {
+        expression { 
+          try {
+            withCredentials([string(credentialsId: 'sonar-host-url', variable: 'HOST'), string(credentialsId: 'sonar-token', variable: 'TOKEN')]) {
+              return HOST && TOKEN
+            }
+          } catch (e) {
+            return false
+          }
+        }
+      }
       steps {
         script {
           // Run tests with coverage
@@ -101,27 +111,29 @@ EOF
             coverage report
           '''
           
-          // Run SonarQube analysis
-          sh '''
-            set -e
-            echo "Running SonarQube analysis..."
-            
-            # Download and run SonarQube scanner
-            curl -sSLo ./sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
-            unzip -o sonar-scanner.zip
-            
-            # Run analysis
-            ./sonar-scanner-5.0.1.3006-linux/bin/sonar-scanner \
-              -Dsonar.projectKey=aceest-fitness-and-gym \
-              -Dsonar.projectName="ACEEST Fitness and Gym" \
-              -Dsonar.sources=src \
-              -Dsonar.tests=test \
-              -Dsonar.python.coverage.reportPaths=coverage.xml \
-              -Dsonar.host.url="${SONAR_HOST_URL}" \
-              -Dsonar.login="${SONAR_TOKEN}"
-            
-            echo "SonarQube analysis completed!"
-          '''
+          // Run SonarQube analysis with credentials
+          withCredentials([string(credentialsId: 'sonar-host-url', variable: 'SONAR_HOST_URL'), string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+            sh '''
+              set -e
+              echo "Running SonarQube analysis..."
+              
+              # Download and run SonarQube scanner
+              curl -sSLo ./sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+              unzip -o sonar-scanner.zip
+              
+              # Run analysis
+              ./sonar-scanner-5.0.1.3006-linux/bin/sonar-scanner \
+                -Dsonar.projectKey=aceest-fitness-and-gym \
+                -Dsonar.projectName="ACEEST Fitness and Gym" \
+                -Dsonar.sources=src \
+                -Dsonar.tests=test \
+                -Dsonar.python.coverage.reportPaths=coverage.xml \
+                -Dsonar.host.url="${SONAR_HOST_URL}" \
+                -Dsonar.login="${SONAR_TOKEN}"
+              
+              echo "SonarQube analysis completed!"
+            '''
+          }
         }
       }
     }
