@@ -32,6 +32,47 @@ jobs:
         run: |
           pytest -q
 
+  code-quality:
+    name: SonarQube Code Analysis
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies and coverage
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install coverage
+
+      - name: Run tests with coverage
+        run: |
+          coverage run -m pytest
+          coverage xml --include=src/*
+          coverage report
+
+      - name: SonarQube Scan
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          args: >
+            -Dsonar.projectKey=aceest-fitness-and-gym
+            -Dsonar.projectName="ACEEST Fitness and Gym"
+            -Dsonar.sources=src
+            -Dsonar.tests=test
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
+            -Dsonar.login=${{ env.SONAR_TOKEN }}
+
   validate-k8s:
     name: Validate Kubernetes manifests
     runs-on: ubuntu-latest
@@ -77,7 +118,7 @@ jobs:
 
   build-and-push:
     name: Build and push Docker image
-    needs: [test, validate-k8s]
+    needs: [test, validate-k8s, code-quality]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
