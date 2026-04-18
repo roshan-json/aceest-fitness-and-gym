@@ -1,0 +1,73 @@
+{
+  "info": {
+    "name": "aceest-fitness-and-gym API",
+    "_postman_id": "b5d7f9f0-0000-4000-8000-000000000000",
+    "description": "Tiny Postman collection for the aceest API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List clients",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/clients",
+          "host": ["{{baseUrl}}"],
+          "path": ["clients"]
+        }
+      }
+    },
+    {
+      "name": "Get client by name",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/clients/:name",
+          "host": ["{{baseUrl}}"],
+          "path": ["clients", ":name"]
+        }
+      }
+    },
+    {
+      "name": "Create client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"name\": \"alice\", \"age\": 30 }"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/clients",
+          "host": ["{{baseUrl}}"],
+          "path": ["clients"]
+        }
+      }
+    },
+    {
+      "name": "Generate program",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/clients/:name/generate_program",
+          "host": ["{{baseUrl}}"],
+          "path": ["clients", ":name", "generate_program"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    }
+  ]
+}
