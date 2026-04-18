@@ -58,7 +58,7 @@ jobs:
           coverage report
 
       - name: SonarCloud Scan
-        if: secrets.SONAR_TOKEN
+        if: ${{ secrets.SONAR_TOKEN }}
         uses: sonarsource/sonarqube-scan-action@master
         with:
           args: >
