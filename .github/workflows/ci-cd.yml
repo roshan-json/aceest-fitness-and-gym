@@ -57,10 +57,11 @@ jobs:
           coverage xml --include=src/*
           coverage report
 
-      - name: SonarQube Scan
+      - name: SonarCloud Scan
         if: secrets.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@master
+        uses: antonioaversa/sonarcloud-github-action@v4.0.0
         with:
+          projectBaseDir: .
           args: >
             -Dsonar.projectKey=aceest-fitness-and-gym
             -Dsonar.projectName="ACEEST Fitness and Gym"
@@ -68,7 +69,6 @@ jobs:
             -Dsonar.tests=test
             -Dsonar.python.coverage.reportPaths=coverage.xml
         env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   validate-k8s:
