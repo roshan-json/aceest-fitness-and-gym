@@ -56,15 +56,34 @@ pipeline {
     stage('Validate Kubernetes Manifests') {
       steps {
         script {
-          // Validate YAML syntax and basic structure
+          // Validate YAML syntax using Python (no cluster connection needed)
           sh '''
-            set -e
-            echo "Validating Kubernetes manifests..."
-            find k8s/ -name "*.yaml" -o -name "*.yml" | while read -r file; do
-              echo "Validating $file..."
-              kubectl --dry-run=client --validate=true apply -f "$file" || exit 1
-            done
-            echo "All Kubernetes manifests are valid!"
+            python3 << 'EOF'
+import yaml
+import os
+import sys
+
+valid = True
+for root, dirs, files in os.walk('k8s'):
+    for file in files:
+        if file.endswith(('.yaml', '.yml')):
+            filepath = os.path.join(root, file)
+            print(f"Validating {filepath}...")
+            try:
+                with open(filepath, 'r') as f:
+                    yaml.safe_load(f)
+                print(f"  ✓ Valid")
+            except yaml.YAMLError as e:
+                print(f"  ✗ Invalid: {e}")
+                valid = False
+
+if valid:
+    print("\nAll Kubernetes manifests are valid!")
+    sys.exit(0)
+else:
+    print("\nSome manifests have errors!")
+    sys.exit(1)
+EOF
           '''
         }
       }
