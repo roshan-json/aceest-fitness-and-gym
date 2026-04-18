@@ -57,20 +57,18 @@ jobs:
           coverage xml --include=src/*
           coverage report
 
-      - name: SonarCloud Scan
-        if: ${{ secrets.SONAR_TOKEN && secrets.SONAR_HOST_URL }}
+      - name: SonarQube Scan
+        if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
         uses: sonarsource/sonarqube-scan-action@master
         with:
           args: >
             -Dsonar.projectKey=aceest-fitness-and-gym
-            -Dsonar.organization=roshanjson
             -Dsonar.projectName="ACEEST Fitness and Gym"
             -Dsonar.sources=src
             -Dsonar.tests=test
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
   validate-k8s:
     name: Validate Kubernetes manifests
