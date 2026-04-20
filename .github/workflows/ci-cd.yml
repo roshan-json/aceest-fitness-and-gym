@@ -77,7 +77,22 @@ jobs:
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
             -Dsonar.login=${{ env.SONAR_TOKEN }}
+      - name: SonarQube Quality Gate Check
+        id: quality-gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
+      - name: Print SonarQube Report URL
+        if: always()
+        run: |
+          echo "SonarQube Analysis Complete!"
+          echo "View your report at: https://sonarcloud.io/dashboard?id=aceest-fitness-and-gym"
+          echo "Quality Gate Status: ${{ steps.quality-gate.outputs.quality-gate-status }}"
+          echo "Project Key: aceest-fitness-and-gym"
+          echo "Organization: roshan-json"
   validate-k8s:
     name: Validate Kubernetes manifests
     runs-on: ubuntu-latest
@@ -125,7 +140,7 @@ jobs:
     name: Build and push Docker image
     needs: [test, validate-k8s, code-quality]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.code-quality.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
