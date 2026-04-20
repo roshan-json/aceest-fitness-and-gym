@@ -69,7 +69,7 @@ jobs:
         uses: sonarsource/sonarqube-scan-action@master
         with:
           args: >
-            -Dsonar.projectKey=aceest-fitness-and-gym
+            -Dsonar.projectKey=roshan-json_aceest-fitness-and-gym
             -Dsonar.organization=roshan-json
             -Dsonar.projectName="ACEEST Fitness and Gym"
             -Dsonar.sources=src
