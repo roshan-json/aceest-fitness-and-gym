@@ -77,6 +77,7 @@ jobs:
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
             -Dsonar.login=${{ env.SONAR_TOKEN }}
+
       - name: SonarQube Quality Gate Check
         id: quality-gate
         uses: sonarsource/sonarqube-quality-gate-action@master
@@ -84,6 +85,32 @@ jobs:
           scanMetadataReportFile: .scannerwork/report-task.txt
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+
+            - name: Generate SonarQube Report
+        if: success()  # Only run if analysis succeeded
+        run: |
+          echo "Generating SonarQube quality report..."
+          
+          # Download CNES Report JAR
+          curl -L -o sonar-cnes-report.jar \
+            https://github.com/cnescatlab/sonar-cnes-report/releases/download/4.3.0.0/sonar-cnes-report-4.3.0.0.jar
+          
+          # Generate DOCX report
+          java -jar sonar-cnes-report.jar \
+            -t ${{ env.SONAR_TOKEN }} \
+            -s ${{ env.SONAR_HOST_URL }} \
+            -p aceest-fitness-and-gym \
+            -o sonarqube-report.docx
+          
+          echo "Report generated successfully"
+          
+      - name: Upload Report Artifact
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: sonarqube-quality-report
+          path: sonarqube-report.docx
+          retention-days: 30
 
       - name: Print SonarQube Report URL
         if: always()
