@@ -77,7 +77,6 @@ jobs:
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
             -Dsonar.login=${{ env.SONAR_TOKEN }}
-
       - name: SonarQube Quality Gate Check
         id: quality-gate
         uses: sonarsource/sonarqube-quality-gate-action@master
@@ -86,7 +85,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
-            - name: Generate SonarQube Report
+      - name: Generate SonarQube Report
         if: success()  # Only run if analysis succeeded
         run: |
           echo "Generating SonarQube quality report..."
@@ -103,7 +102,7 @@ jobs:
             -o sonarqube-report.docx
           
           echo "Report generated successfully"
-          
+
       - name: Upload Report Artifact
         if: success()
         uses: actions/upload-artifact@v3
