@@ -104,7 +104,7 @@ jobs:
           java -jar sonar-cnes-report.jar \
             -t ${{ env.SONAR_TOKEN }} \
             -s ${{ env.SONAR_HOST_URL }} \
-            -p aceest-fitness-and-gym \
+            -p roshan-json_aceest-fitness-and-gym \
             -o sonarqube-report.docx
           
           echo "Report generated successfully"
