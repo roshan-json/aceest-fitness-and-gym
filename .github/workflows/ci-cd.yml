@@ -105,7 +105,8 @@ jobs:
             -t ${{ env.SONAR_TOKEN }} \
             -s ${{ env.SONAR_HOST_URL }} \
             -p roshan-json_aceest-fitness-and-gym \
-            -o sonarqube-report.docx
+            -o sonarqube-report.docx \
+            --skipDetails
           
           echo "Report generated successfully"
 
@@ -121,7 +122,7 @@ jobs:
         if: always()
         run: |
           echo "SonarQube Analysis Complete!"
-          echo "View your report at: https://sonarcloud.io/dashboard?id=aceest-fitness-and-gym"
+          echo "View your report at: https://sonarcloud.io/dashboard?id=roshan-json_aceest-fitness-and-gym"
           echo "Quality Gate Status: ${{ steps.quality-gate.outputs.quality-gate-status }}"
           echo "Project Key: aceest-fitness-and-gym"
           echo "Organization: roshan-json"
