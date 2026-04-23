@@ -98,25 +98,24 @@ jobs:
           
           # Download CNES Report JAR
           curl -L -o sonar-cnes-report.jar \
-            https://github.com/cnescatlab/sonar-cnes-report/releases/download/5.0.3/sonar-cnes-report-5.0.3.jar
+            https://github.com/cnescatlab/sonar-cnes-report/releases/download/4.2.0/sonar-cnes-report-4.2.0.jar
           
           # Generate DOCX report
           java -jar sonar-cnes-report.jar \
             -t ${{ env.SONAR_TOKEN }} \
             -s ${{ env.SONAR_HOST_URL }} \
             -p roshan-json_aceest-fitness-and-gym \
-            -o sonarqube-report.docx \
-            --skipDetails
+            -o report/
           
           echo "Report generated successfully"
 
       - name: Upload Report Artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sonarqube-quality-report
-          path: sonarqube-report.docx
-          retention-days: 30
+          if: success()
+          uses: actions/upload-artifact@v4
+          with:
+            name: sonarqube-quality-report
+            path: report/
+            retention-days: 30
 
       - name: Print SonarQube Report URL
         if: always()
