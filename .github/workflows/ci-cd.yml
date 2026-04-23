@@ -85,6 +85,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Generate SonarQube Report
         if: success()  # Only run if analysis succeeded
         run: |
