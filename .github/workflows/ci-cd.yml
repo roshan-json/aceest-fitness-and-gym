@@ -91,31 +91,19 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Generate SonarQube Report
-        if: success()  # Only run if analysis succeeded
+      - name: Generate simple report
         run: |
-          echo "Generating SonarQube quality report..."
-          
-          # Download CNES Report JAR
-          curl -L -o sonar-cnes-report.jar \
-            https://github.com/cnescatlab/sonar-cnes-report/releases/download/4.2.0/sonar-cnes-report-4.2.0.jar
-          
-          # Generate DOCX report
-          java -jar sonar-cnes-report.jar \
-            -t ${{ env.SONAR_TOKEN }} \
-            -s ${{ env.SONAR_HOST_URL }} \
-            -p roshan-json_aceest-fitness-and-gym \
-            -o report/
-          
-          echo "Report generated successfully"
+          curl -u $SONAR_TOKEN: \
+          "$SONAR_HOST_URL/api/measures/component?component=roshan-json_aceest-fitness-and-gym&metricKeys=coverage,bugs,vulnerabilities,code_smells" \
+          -o sonar-report.json
 
-      - name: Upload Report Artifact
-        if: success()
+          cat sonar-report.json
+
+      - name: Upload JSON report
         uses: actions/upload-artifact@v4
         with:
-          name: sonarqube-quality-report
-          path: report/
-          retention-days: 30
+          name: sonar-report
+          path: sonar-report.json
 
       - name: Print SonarQube Report URL
         if: always()
