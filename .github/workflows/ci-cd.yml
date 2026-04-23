@@ -33,84 +33,92 @@ jobs:
           pytest -q
 
   code-quality:
-  name: SonarQube Code Analysis
-  runs-on: ubuntu-latest
-  env:
-    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-  steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Full history for better analysis
+    name: SonarQube Code Analysis
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies and coverage
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install coverage
+      - name: Install dependencies and coverage
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install coverage
 
-    - name: Run tests with coverage
-      run: |
-        coverage run -m pytest
-        coverage xml --include=src/*
-        coverage report
+      - name: Run tests with coverage
+        run: |
+          coverage run -m pytest
+          coverage xml --include=src/*
+          coverage report
 
-    - name: SonarQube credentials debug
-      run: |
-        echo "SONAR_HOST_URL set: ${SONAR_HOST_URL:+yes}"
-        echo "SONAR_TOKEN set: ${SONAR_TOKEN:+yes}"
+      - name: SonarQube credentials debug
+        run: |
+          echo "SONAR_HOST_URL set: ${SONAR_HOST_URL:+yes}"
+          echo "SONAR_TOKEN set: ${SONAR_TOKEN:+yes}"
 
-    - name: SonarQube Scan
-      uses: sonarsource/sonarqube-scan-action@master
-      with:
-        args: >
-          -Dsonar.projectKey=roshan-json_aceest-fitness-and-gym
-          -Dsonar.organization=roshan-json
-          -Dsonar.projectName="ACEEST Fitness and Gym"
-          -Dsonar.sources=src
-          -Dsonar.tests=test
-          -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
-          -Dsonar.login=${{ env.SONAR_TOKEN }}
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          args: >
+            -Dsonar.projectKey=roshan-json_aceest-fitness-and-gym
+            -Dsonar.organization=roshan-json
+            -Dsonar.projectName="ACEEST Fitness and Gym"
+            -Dsonar.sources=src
+            -Dsonar.tests=test
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
+            -Dsonar.login=${{ env.SONAR_TOKEN }}
+      - name: SonarQube Quality Gate Check
+        id: quality-gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: '17'
+      - name: Generate SonarQube Report
+        if: success()  # Only run if analysis succeeded
+        run: |
+          echo "Generating SonarQube quality report..."
+          
+          # Download CNES Report JAR
+          curl -L -o sonar-cnes-report.jar \
+            https://github.com/cnescatlab/sonar-cnes-report/releases/download/5.0.3/sonar-cnes-report-5.0.3.jar
+          
+          # Generate DOCX report
+          java -jar sonar-cnes-report.jar \
+            -t ${{ env.SONAR_TOKEN }} \
+            -s ${{ env.SONAR_HOST_URL }} \
+            -p aceest-fitness-and-gym \
+            -o sonarqube-report.docx
+          
+          echo "Report generated successfully"
 
-    - name: Download CNES Sonar Report tool
-      run: |
-        curl -L -o sonar-cnes-report.jar \
-        https://github.com/cnescatlab/sonar-cnes-report/releases/download/4.2.0/sonar-cnes-report.jar
+      - name: Upload Report Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonarqube-quality-report
+          path: sonarqube-report.docx
+          retention-days: 30
 
-        echo "Validating download..."
-        ls -lh sonar-cnes-report.jar
-
-        FILE_SIZE=$(stat -c%s sonar-cnes-report.jar)
-        if [ "$FILE_SIZE" -lt 100000 ]; then
-          echo "Downloaded JAR is invalid or too small"
-          exit 1
-        fi
-
-    - name: Generate SonarQube PDF Report
-      run: |
-        java -jar sonar-cnes-report.jar \
-          -s $SONAR_HOST_URL \
-          -t $SONAR_TOKEN \
-          -p roshan-json_aceest-fitness-and-gym \
-          -o sonar-report.pdf
-
-    - name: Upload Sonar report
-      uses: actions/upload-artifact@v4
-      with:
-        name: sonar-report
-        path: sonar-report.pdf
+      - name: Print SonarQube Report URL
+        if: always()
+        run: |
+          echo "SonarQube Analysis Complete!"
+          echo "View your report at: https://sonarcloud.io/dashboard?id=aceest-fitness-and-gym"
+          echo "Quality Gate Status: ${{ steps.quality-gate.outputs.quality-gate-status }}"
+          echo "Project Key: aceest-fitness-and-gym"
+          echo "Organization: roshan-json"
   validate-k8s:
     name: Validate Kubernetes manifests
     runs-on: ubuntu-latest
